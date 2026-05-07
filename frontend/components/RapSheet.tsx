@@ -17,7 +17,6 @@ export function RapSheet({ dossier }: RapSheetProps) {
   const priorTokens = dossier.deployer?.prior_tokens || [];
   const bundle = dossier.distribution?.bundle;
   const security = dossier.security;
-  const callToAction = getCallToAction(dossier.band);
 
   async function copyWallet() {
     if (!wallet || wallet === "unknown") {
@@ -52,9 +51,18 @@ export function RapSheet({ dossier }: RapSheetProps) {
               {dossier.band}
             </span>
           </div>
-          <p className="mt-2 font-mono text-5xl font-bold leading-none" style={{ color: bandColor }}>
-            {callToAction}
-          </p>
+          <div style={{
+            fontSize: '64px',
+            fontWeight: 'bold',
+            fontFamily: 'monospace',
+            color: dossier.band === 'CLEAR' ? '#22c55e' : 
+                   dossier.band === 'AVOID' ? '#ef4444' : '#eab308',
+            marginTop: '8px',
+            letterSpacing: '2px'
+          }}>
+            {dossier.band === 'CLEAR' ? 'APE' : 
+             dossier.band === 'AVOID' ? 'DUMP' : 'CAUTION'}
+          </div>
         </div>
       </section>
 
@@ -145,7 +153,10 @@ export function RapSheet({ dossier }: RapSheetProps) {
         )}
       </Section>
 
-      <Section label={`VERDICT — ${callToAction}`} labelColor={bandColor}>
+      <Section
+        label={`VERDICT — ${dossier.band === "CLEAR" ? "APE" : dossier.band === "AVOID" ? "DUMP" : "CAUTION"}`}
+        labelColor={dossier.band === "CLEAR" ? "#22c55e" : dossier.band === "AVOID" ? "#ef4444" : "#eab308"}
+      >
         <blockquote
           className="border-l-2 pl-5 font-mono text-xl italic leading-8 text-[#f5f5f5]"
           style={{ borderColor: bandColor }}
@@ -273,14 +284,4 @@ function outcomeColor(outcome: string) {
     return "#22c55e";
   }
   return "#737373";
-}
-
-function getCallToAction(band: string) {
-  if (band === "CLEAR") {
-    return "APE";
-  }
-  if (band === "AVOID") {
-    return "DUMP";
-  }
-  return "CAUTION";
 }
