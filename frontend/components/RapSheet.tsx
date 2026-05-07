@@ -52,6 +52,31 @@ export function RapSheet({ dossier }: RapSheetProps) {
         </div>
       </section>
 
+      <Section label="TOKEN">
+        <div className="grid gap-3 md:grid-cols-5">
+          <Metric
+            label="PRICE"
+            value={formatNumber(dossier.overview?.price, { price: true })}
+          />
+          <Metric
+            label="MARKET CAP"
+            value={formatNumber(dossier.overview?.mc, { currency: true })}
+          />
+          <Metric
+            label="LIQUIDITY"
+            value={formatNumber(dossier.overview?.liquidity, { currency: true })}
+          />
+          <Metric
+            label="AGE"
+            value={formatAge(dossier.overview?.age_days)}
+          />
+          <Metric
+            label="SUPPLY"
+            value={formatNumber(dossier.overview?.supply)}
+          />
+        </div>
+      </Section>
+
       <Section label="THE DEV">
         <button
           type="button"
@@ -80,7 +105,8 @@ export function RapSheet({ dossier }: RapSheetProps) {
           />
           <Metric
             label="TOP 10"
-            value={dossier.distribution?.top10_pct == null ? "N/A" : `${fixed(dossier.distribution.top10_pct)}%`}
+            value={dossier.distribution?.top10_pct == null ? "LOADING" : `${fixed(dossier.distribution.top10_pct)}%`}
+            detail={dossier.distribution?.top10_pct == null ? "Calculated from holder data" : undefined}
           />
           <Metric
             label="SUSPECT WALLETS"
@@ -98,7 +124,7 @@ export function RapSheet({ dossier }: RapSheetProps) {
             <SecurityStatus label="FREEZE" value={security?.freeze_revoked} />
             <Metric
               label="LIQUIDITY"
-              value={dossier.overview?.liquidity == null ? "N/A" : formatNumber(dossier.overview.liquidity)}
+              value={formatNumber(dossier.overview?.liquidity, { currency: true })}
             />
           </div>
         )}

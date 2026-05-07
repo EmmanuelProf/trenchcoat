@@ -12,33 +12,48 @@ export function formatAddress(addr: string): string {
   return `${addr.slice(0, 4)}...${addr.slice(-4)}`;
 }
 
-export function formatNumber(n: number): string {
+export function formatNumber(
+  n: number | null | undefined,
+  options: { currency?: boolean; price?: boolean } = {}
+): string {
+  if (n == null) {
+    return "UNKNOWN";
+  }
+
   const sign = n < 0 ? "-" : "";
   const value = Math.abs(n);
+  const prefix = options.currency || options.price ? "$" : "";
+
+  if (options.price && value < 0.01) {
+    return `${sign}${prefix}${value.toPrecision(8).replace(/\.?0+$/, "")}`;
+  }
 
   if (value >= 1_000_000_000) {
-    return `${sign}$${trim(value / 1_000_000_000)}B`;
+    return `${sign}${prefix}${trim(value / 1_000_000_000)}B`;
   }
   if (value >= 1_000_000) {
-    return `${sign}$${trim(value / 1_000_000)}M`;
+    return `${sign}${prefix}${trim(value / 1_000_000)}M`;
   }
   if (value >= 1_000) {
-    return `${sign}$${trim(value / 1_000)}K`;
+    return `${sign}${prefix}${trim(value / 1_000)}K`;
   }
-  return `${sign}$${trim(value)}`;
+  return `${sign}${prefix}${trim(value)}`;
 }
 
-export function formatAge(days: number): string {
-  if (days < 60) {
-    return `${Math.round(days)} ${Math.round(days) === 1 ? "day" : "days"}`;
+export function formatAge(days: number | null | undefined): string {
+  if (days == null) {
+    return "UNKNOWN";
   }
-
+  if (days < 1) {
+    return "< 1 day";
+  }
+  if (days < 30) {
+    return `${Math.floor(days)} days`;
+  }
   if (days < 365) {
-    const months = Math.round(days / 30);
-    return `${months} ${months === 1 ? "month" : "months"}`;
+    return `${Math.floor(days / 30)} months`;
   }
-
-  return `${Math.round(days)} days`;
+  return `${(days / 365).toFixed(1)} years`;
 }
 
 export function getBandColor(band: string): string {

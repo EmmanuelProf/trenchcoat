@@ -56,6 +56,9 @@ async def get_dossier(ca: str, request: Request, chain: str = "solana") -> Dossi
     overview = _overview_model(overview_result, bundle_result)
     security = _security_model(security_result)
     distribution = _distribution_model(security, holders_result, bundle_result)
+    calculated_top10_pct = _top10_pct_from_holders(holders_result, overview_result)
+    if calculated_top10_pct is not None:
+        distribution.top10_pct = calculated_top10_pct
 
     deployer = await _deployer_profile(ca, chain, birdeye, supabase)
     score, band = score_dossier(security, distribution, deployer, overview)
@@ -181,7 +184,7 @@ def _raw_signals(
         "symbol": overview.symbol if overview is not None else None,
         "mint_revoked": security.mint_revoked if security is not None else None,
         "freeze_revoked": security.freeze_revoked if security is not None else None,
-        "top10_pct": security.top10_pct if security is not None else None,
+        "top10_pct": distribution.top10_pct if distribution is not None else None,
         "bundled": bundle.bundled if bundle is not None else False,
         "bundle_pct": bundle.bundle_pct if bundle is not None else 0,
         "prior_count": deployer.prior_count if deployer is not None else 0,
@@ -208,6 +211,39 @@ def _items(response: dict[str, Any] | None) -> list[dict[str, Any]]:
             if isinstance(value, list):
                 return value
     return []
+
+
+def _top10_pct_from_holders(
+    holders_response: dict[str, Any] | None,
+    overview_response: dict[str, Any] | None,
+) -> float | None:
+    holders = _items(holders_response)
+    overview = _data(overview_response)
+    if not holders or not isinstance(overview, dict):
+        return None
+
+    supply = _number(
+        overview.get("supply"),
+        overview.get("circulatingSupply"),
+        overview.get("totalSupply"),
+    )
+    if supply is None or supply <= 0:
+        return None
+
+    sorted_holders = sorted(
+        holders,
+        key=lambda holder: _number(holder.get("ui_amount"), holder.get("uiAmount"), holder.get("amount")) or 0,
+        reverse=True,
+    )
+    top10_amount = 0.0
+    for holder in sorted_holders[:10]:
+        top10_amount += _number(
+            holder.get("ui_amount"),
+            holder.get("uiAmount"),
+            holder.get("amount"),
+        ) or 0
+
+    return round((top10_amount / supply) * 100, 2)
 
 
 def _number(*values: Any) -> float | None:
