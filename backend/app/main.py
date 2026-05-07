@@ -1,4 +1,5 @@
 import os
+import threading
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -9,6 +10,7 @@ from app.api.dossier import router as dossier_router
 from app.db.redis_client import UpstashRedisClient
 from app.db.supabase import SupabaseClient
 from app.services.birdeye import BirdeyeClient
+from app.telegram_bot import main as bot_main
 
 
 load_dotenv()
@@ -22,8 +24,20 @@ def _allowed_origins() -> list[str]:
     return [origin.strip() for origin in origins.split(",") if origin.strip()]
 
 
+def start_bot():
+    token = os.getenv("TELEGRAM_BOT_TOKEN")
+    if token:
+        print("Starting Telegram bot...")
+        bot_main()
+    else:
+        print("No TELEGRAM_BOT_TOKEN found, skipping bot")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    thread = threading.Thread(target=start_bot, daemon=True)
+    thread.start()
+
     redis = UpstashRedisClient(
         os.getenv("UPSTASH_REDIS_REST_URL", ""),
         os.getenv("UPSTASH_REDIS_REST_TOKEN", ""),
