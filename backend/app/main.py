@@ -35,8 +35,9 @@ def start_bot():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    thread = threading.Thread(target=start_bot, daemon=True)
-    thread.start()
+    if os.getenv("TELEGRAM_BOT_TOKEN") and os.getenv("WEB_CONCURRENCY", "1") == "1":
+        thread = threading.Thread(target=start_bot, daemon=True)
+        thread.start()
 
     redis = UpstashRedisClient(
         os.getenv("UPSTASH_REDIS_REST_URL", ""),
