@@ -17,6 +17,7 @@ export function RapSheet({ dossier }: RapSheetProps) {
   const priorTokens = dossier.deployer?.prior_tokens || [];
   const bundle = dossier.distribution?.bundle;
   const security = dossier.security;
+  const callToAction = getCallToAction(dossier.band);
 
   async function copyWallet() {
     if (!wallet || wallet === "unknown") {
@@ -39,16 +40,21 @@ export function RapSheet({ dossier }: RapSheetProps) {
             Generated {generatedAgo(dossier.generated_at)}
           </p>
         </div>
-        <div className="flex items-end gap-4 md:items-center">
-          <div className="font-mono text-6xl font-bold" style={{ color: bandColor }}>
-            {dossier.score}
+        <div className="md:text-right">
+          <div className="flex items-end gap-4 md:items-center md:justify-end">
+            <div className="font-mono text-6xl font-bold" style={{ color: bandColor }}>
+              {dossier.score}
+            </div>
+            <span
+              className="rounded px-3 py-1 font-mono text-sm font-bold text-[#f5f5f5]"
+              style={{ backgroundColor: bandColor }}
+            >
+              {dossier.band}
+            </span>
           </div>
-          <span
-            className="rounded px-3 py-1 font-mono text-sm font-bold text-[#f5f5f5]"
-            style={{ backgroundColor: bandColor }}
-          >
-            {dossier.band}
-          </span>
+          <p className="mt-2 font-mono text-5xl font-bold leading-none" style={{ color: bandColor }}>
+            {callToAction}
+          </p>
         </div>
       </section>
 
@@ -117,20 +123,29 @@ export function RapSheet({ dossier }: RapSheetProps) {
 
       <Section label="SECURITY">
         {security?.mint_revoked == null && security?.freeze_revoked == null ? (
-          <p className="font-mono text-sm text-[#737373]">SECURITY DATA UNAVAILABLE</p>
+          <div className="space-y-5">
+            <div className="space-y-2 font-mono text-sm">
+              <SecurityLine label="MINT AUTHORITY" value={null} />
+              <SecurityLine label="FREEZE AUTHORITY" value={null} />
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <SecurityLink href={`https://solscan.io/token/${dossier.ca}`}>
+                CHECK ON SOLSCAN
+              </SecurityLink>
+              <SecurityLink href={`https://rugcheck.xyz/tokens/${dossier.ca}`}>
+                CHECK ON RUGCHECK
+              </SecurityLink>
+            </div>
+          </div>
         ) : (
-          <div className="grid gap-3 md:grid-cols-3">
-            <SecurityStatus label="MINT" value={security?.mint_revoked} />
-            <SecurityStatus label="FREEZE" value={security?.freeze_revoked} />
-            <Metric
-              label="LIQUIDITY"
-              value={formatNumber(dossier.overview?.liquidity, { currency: true })}
-            />
+          <div className="space-y-2 font-mono text-sm">
+            <SecurityLine label="MINT AUTHORITY" value={security?.mint_revoked} />
+            <SecurityLine label="FREEZE AUTHORITY" value={security?.freeze_revoked} />
           </div>
         )}
       </Section>
 
-      <Section label="VERDICT">
+      <Section label={`VERDICT — ${callToAction}`} labelColor={bandColor}>
         <blockquote
           className="border-l-2 pl-5 font-mono text-xl italic leading-8 text-[#f5f5f5]"
           style={{ borderColor: bandColor }}
@@ -144,14 +159,18 @@ export function RapSheet({ dossier }: RapSheetProps) {
 
 function Section({
   label,
+  labelColor,
   children,
 }: {
   label: string;
+  labelColor?: string;
   children: React.ReactNode;
 }) {
   return (
     <section className="border-b border-[#262626] p-5 last:border-b-0 md:p-8">
-      <p className="mb-4 font-mono text-xs font-bold text-[#737373]">{label}</p>
+      <p className="mb-4 font-mono text-xs font-bold text-[#737373]" style={{ color: labelColor }}>
+        {label}
+      </p>
       {children}
     </section>
   );
@@ -198,16 +217,35 @@ function Metric({
   );
 }
 
-function SecurityStatus({ label, value }: { label: string; value: boolean | null | undefined }) {
+function SecurityLine({ label, value }: { label: string; value: boolean | null | undefined }) {
   const text = value == null ? "UNKNOWN" : value ? "REVOKED" : "NOT REVOKED";
   const color = value == null ? "#737373" : value ? "#22c55e" : "#ef4444";
   return (
-    <div className="rounded border border-[#262626] bg-[#0a0a0a] p-4">
-      <p className="font-mono text-xs text-[#737373]">{label}</p>
-      <p className="mt-2 font-mono text-sm font-bold" style={{ color }}>
+    <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 border-b border-[#262626] py-2 last:border-b-0">
+      <span className="text-[#737373]">{label}</span>
+      <span className="font-bold" style={{ color }}>
         {text}
-      </p>
+      </span>
     </div>
+  );
+}
+
+function SecurityLink({
+  href,
+  children,
+}: {
+  href: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className="border border-[#404040] bg-[#262626] px-4 py-2 font-mono text-xs font-bold text-[#f5f5f5] hover:bg-[#333333]"
+    >
+      {children}
+    </a>
   );
 }
 
@@ -235,4 +273,14 @@ function outcomeColor(outcome: string) {
     return "#22c55e";
   }
   return "#737373";
+}
+
+function getCallToAction(band: string) {
+  if (band === "CLEAR") {
+    return "APE";
+  }
+  if (band === "AVOID") {
+    return "DUMP";
+  }
+  return "CAUTION";
 }

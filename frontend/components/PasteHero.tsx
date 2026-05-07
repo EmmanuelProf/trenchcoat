@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 
 import { ChainSelector } from "@/components/ChainSelector";
 
-const SOLANA_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
-const EVM_RE = /^0x[a-fA-F0-9]{40}$/;
+const SOLANA_CA = /^[1-9A-HJ-NP-Za-km-z]{32,50}$/;
+const EVM_CA = /^0x[a-fA-F0-9]{40}$/;
 
 export function PasteHero() {
   const router = useRouter();
@@ -16,13 +16,13 @@ export function PasteHero() {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const value = ca.trim();
-    if (!validAddress(value, chain)) {
+    const trimmed = ca.trim();
+    if (!isValidCA(trimmed)) {
       setError("Invalid contract address");
       return;
     }
     setError("");
-    router.push(`/dossier/${encodeURIComponent(value)}?chain=${chain}`);
+    router.push(`/dossier/${encodeURIComponent(trimmed)}?chain=${chain}`);
   }
 
   return (
@@ -54,9 +54,7 @@ export function PasteHero() {
   );
 }
 
-function validAddress(value: string, chain: string) {
-  if (chain === "solana") {
-    return SOLANA_RE.test(value) && !value.startsWith("0x");
-  }
-  return EVM_RE.test(value);
+function isValidCA(input: string): boolean {
+  const trimmed = input.trim();
+  return SOLANA_CA.test(trimmed) || EVM_CA.test(trimmed);
 }
