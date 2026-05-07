@@ -7,6 +7,7 @@ export default function PasteHero() {
   const [input, setInput] = useState('')
   const [chain, setChain] = useState('solana')
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
   const router = useRouter()
 
   const handleSubmit = () => {
@@ -18,6 +19,7 @@ export default function PasteHero() {
       return
     }
     setError('')
+    setLoading(true)
     router.push(`/dossier/${trimmed}?chain=${chain}`)
   }
 
@@ -64,20 +66,23 @@ export default function PasteHero() {
         </select>
         <button
           onClick={handleSubmit}
+          disabled={loading}
           style={{
             height: '52px',
-            background: '#f5f5f5',
-            color: '#0a0a0a',
+            background: loading ? '#262626' : '#f5f5f5',
+            color: loading ? '#737373' : '#0a0a0a',
             fontFamily: 'monospace',
             fontWeight: 'bold',
             fontSize: '14px',
             padding: '0 36px',
             border: 'none',
-            cursor: 'pointer',
+            cursor: loading ? 'not-allowed' : 'pointer',
             letterSpacing: '2px',
+            transition: 'all 0.1s ease',
+            minWidth: '120px',
           }}
         >
-          RUN
+          {loading ? 'RUNNING...' : 'RUN'}
         </button>
       </div>
       {error && (
