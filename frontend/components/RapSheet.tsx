@@ -55,12 +55,13 @@ export function RapSheet({ dossier }: RapSheetProps) {
             fontSize: '64px',
             fontWeight: 'bold',
             fontFamily: 'monospace',
-            color: dossier.band === 'CLEAR' ? '#22c55e' : 
+            color: dossier.band === 'CLEAR' ? '#22c55e' :
                    dossier.band === 'AVOID' ? '#ef4444' : '#eab308',
             marginTop: '8px',
-            letterSpacing: '2px'
+            letterSpacing: '2px',
+            lineHeight: 1,
           }}>
-            {dossier.band === 'CLEAR' ? 'APE' : 
+            {dossier.band === 'CLEAR' ? 'APE' :
              dossier.band === 'AVOID' ? 'DUMP' : 'CAUTION'}
           </div>
         </div>
@@ -131,19 +132,66 @@ export function RapSheet({ dossier }: RapSheetProps) {
 
       <Section label="SECURITY">
         {security?.mint_revoked == null && security?.freeze_revoked == null ? (
-          <div className="space-y-5">
-            <div className="space-y-2 font-mono text-sm">
-              <SecurityLine label="MINT AUTHORITY" value={null} />
-              <SecurityLine label="FREEZE AUTHORITY" value={null} />
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span style={{ fontFamily: 'monospace', fontSize: '12px', color: '#737373' }}>MINT AUTHORITY</span>
+              <span style={{ fontFamily: 'monospace', fontSize: '12px', color: '#737373', fontStyle: 'italic' }}>UNKNOWN</span>
             </div>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <SecurityLink href={`https://solscan.io/token/${dossier.ca}`}>
-                CHECK ON SOLSCAN
-              </SecurityLink>
-              <SecurityLink href={`https://rugcheck.xyz/tokens/${dossier.ca}`}>
-                CHECK ON RUGCHECK
-              </SecurityLink>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <span style={{ fontFamily: 'monospace', fontSize: '12px', color: '#737373' }}>FREEZE AUTHORITY</span>
+              <span style={{ fontFamily: 'monospace', fontSize: '12px', color: '#737373', fontStyle: 'italic' }}>UNKNOWN</span>
             </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <a
+                href={`https://solscan.io/token/${dossier.ca}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  flex: 1,
+                  display: 'block',
+                  padding: '12px 16px',
+                  background: '#171717',
+                  border: '1px solid #262626',
+                  color: '#f5f5f5',
+                  fontFamily: 'monospace',
+                  fontSize: '13px',
+                  textDecoration: 'none',
+                  textAlign: 'center' as const,
+                  letterSpacing: '1px',
+                }}
+              >
+                CHECK ON SOLSCAN ↗
+              </a>
+              <a
+                href={`https://rugcheck.xyz/tokens/${dossier.ca}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  flex: 1,
+                  display: 'block',
+                  padding: '12px 16px',
+                  background: '#171717',
+                  border: '1px solid #262626',
+                  color: '#f5f5f5',
+                  fontFamily: 'monospace',
+                  fontSize: '13px',
+                  textDecoration: 'none',
+                  textAlign: 'center' as const,
+                  letterSpacing: '1px',
+                }}
+              >
+                CHECK ON RUGCHECK ↗
+              </a>
+            </div>
+            <p style={{
+              fontFamily: 'monospace',
+              fontSize: '11px',
+              color: '#737373',
+              marginTop: '8px',
+              fontStyle: 'italic',
+            }}>
+              Security data unavailable on free tier
+            </p>
           </div>
         ) : (
           <div className="space-y-2 font-mono text-sm">
@@ -238,25 +286,6 @@ function SecurityLine({ label, value }: { label: string; value: boolean | null |
         {text}
       </span>
     </div>
-  );
-}
-
-function SecurityLink({
-  href,
-  children,
-}: {
-  href: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noreferrer"
-      className="border border-[#404040] bg-[#262626] px-4 py-2 font-mono text-xs font-bold text-[#f5f5f5] hover:bg-[#333333]"
-    >
-      {children}
-    </a>
   );
 }
 

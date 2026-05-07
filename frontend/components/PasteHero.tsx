@@ -1,54 +1,96 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 
-import { ChainSelector } from "@/components/ChainSelector";
-
-export function PasteHero() {
-  const router = useRouter();
-  const [input, setInput] = useState("");
-  const [chain, setChain] = useState("solana");
-  const [error, setError] = useState("");
+export default function PasteHero() {
+  const [input, setInput] = useState('')
+  const [chain, setChain] = useState('solana')
+  const [error, setError] = useState('')
+  const router = useRouter()
 
   const handleSubmit = () => {
     const trimmed = input.trim()
     const SOLANA_CA = /^[1-9A-HJ-NP-Za-km-z]{32,50}$/
     const EVM_CA = /^0x[a-fA-F0-9]{40}$/
-    
     if (!SOLANA_CA.test(trimmed) && !EVM_CA.test(trimmed)) {
-      setError('Invalid contract address')
+      setError('INVALID CONTRACT ADDRESS')
       return
     }
-    
     setError('')
     router.push(`/dossier/${trimmed}?chain=${chain}`)
   }
 
   return (
-    <form onSubmit={(event) => event.preventDefault()} className="w-full max-w-4xl">
-      <div className="flex flex-col gap-3 md:flex-row">
+    <div style={{ width: '100%', maxWidth: '800px' }}>
+      <div style={{ display: 'flex', gap: '8px' }}>
         <input
+          type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
           placeholder="PASTE CONTRACT ADDRESS"
-          className={`h-12 flex-1 rounded border bg-[#171717] px-4 font-mono text-sm text-[#f5f5f5] outline-none placeholder:text-[#737373] ${
-            error ? "border-[#ef4444]" : "border-[#262626]"
-          }`}
+          style={{
+            flex: 1,
+            height: '52px',
+            background: '#171717',
+            border: error ? '1px solid #ef4444' : '1px solid #262626',
+            color: '#f5f5f5',
+            fontFamily: 'monospace',
+            fontSize: '13px',
+            padding: '0 16px',
+            outline: 'none',
+            letterSpacing: '0.5px',
+          }}
         />
-        <ChainSelector value={chain} onChange={setChain} />
+        <select
+          value={chain}
+          onChange={(e) => setChain(e.target.value)}
+          style={{
+            height: '52px',
+            background: '#171717',
+            border: '1px solid #262626',
+            color: '#f5f5f5',
+            fontFamily: 'monospace',
+            fontSize: '13px',
+            padding: '0 12px',
+            outline: 'none',
+            cursor: 'pointer',
+          }}
+        >
+          <option value="solana">SOLANA</option>
+          <option value="base">BASE</option>
+          <option value="ethereum">ETHEREUM</option>
+        </select>
         <button
-          type="button"
           onClick={handleSubmit}
-          className="h-12 rounded border border-[#f5f5f5] bg-[#f5f5f5] px-8 font-mono text-sm font-bold text-[#0a0a0a]"
+          style={{
+            height: '52px',
+            background: '#f5f5f5',
+            color: '#0a0a0a',
+            fontFamily: 'monospace',
+            fontWeight: 'bold',
+            fontSize: '14px',
+            padding: '0 36px',
+            border: 'none',
+            cursor: 'pointer',
+            letterSpacing: '2px',
+          }}
         >
           RUN
         </button>
       </div>
-      {error ? (
-        <p className="mt-3 font-mono text-sm text-[#ef4444]">{error}</p>
-      ) : null}
-    </form>
-  );
+      {error && (
+        <p style={{
+          color: '#ef4444',
+          fontFamily: 'monospace',
+          fontSize: '11px',
+          marginTop: '6px',
+          letterSpacing: '1px',
+        }}>
+          {error}
+        </p>
+      )}
+    </div>
+  )
 }

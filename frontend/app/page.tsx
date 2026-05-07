@@ -1,10 +1,18 @@
+"use client";
+
+import { useCallback, useState } from "react";
 import Link from "next/link";
 
-import { PasteHero } from "@/components/PasteHero";
+import IntroLoader from "@/components/IntroLoader";
+import PasteHero from "@/components/PasteHero";
 
 export default function Home() {
+  const [showIntro, setShowIntro] = useState(true);
+  const completeIntro = useCallback(() => setShowIntro(false), []);
+
   return (
     <main className="min-h-screen bg-[#0a0a0a] text-[#f5f5f5]">
+      {showIntro ? <IntroLoader onComplete={completeIntro} /> : null}
       <nav className="mx-auto flex max-w-6xl items-center justify-between border-b border-[#262626] px-5 py-5 font-mono">
         <Link href="/" className="text-sm font-bold tracking-normal">
           TRENCHCOAT
