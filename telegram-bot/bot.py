@@ -1,138 +1,172 @@
 import json
 import os
-import re
+import time
+import urllib.parse
 import urllib.request
-from collections import defaultdict, deque
-from time import monotonic
 
 from dotenv import load_dotenv
-from telegram import Update
-from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 
 load_dotenv()
 
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+BACKEND_URL = os.getenv("BACKEND_URL", "https://trenchcoat.onrender.com").rstrip("/")
+BASE = f"https://api.telegram.org/bot{TOKEN}"
 
-SOLANA_CA = re.compile(r"^[1-9A-HJ-NP-Za-km-z]{32,50}$")
-EVM_CA = re.compile(r"^0x[a-fA-F0-9]{40}$")
-RATE_LIMIT_WINDOW_SECONDS = 60
-RATE_LIMIT_MAX_REQUESTS = 3
-user_requests: dict[int, deque[float]] = defaultdict(deque)
-
-
-def is_valid_ca(value: str) -> bool:
-    return bool(SOLANA_CA.fullmatch(value) or EVM_CA.fullmatch(value))
+SOLANA_CA = __import__("re").compile(r"[1-9A-HJ-NP-Za-km-z]{32,50}")
+rate_limits = {}
 
 
-def truncate_wallet(wallet: str | None) -> str:
-    if not wallet or wallet == "unknown" or len(wallet) <= 8:
-        return wallet or "unknown"
-    return f"{wallet[:4]}...{wallet[-4:]}"
+def api_call(method, data=None):
+    url = f"{BASE}/{method}"
+    if data:
+        payload = json.dumps(data).encode()
+        req = urllib.request.Request(
+            url,
+            data=payload,
+            headers={"Content-Type": "application/json"},
+        )
+    else:
+        req = urllib.request.Request(url)
+    with urllib.request.urlopen(req, timeout=10) as r:
+        return json.loads(r.read())
 
 
-def band_emoji(band: str) -> str:
-    if band == "AVOID":
-        return "🔴"
-    if band == "CAUTION":
-        return "🟡"
-    if band == "CLEAR":
-        return "🟢"
-    return "⚪"
-
-
-def check_rate_limit(user_id: int) -> bool:
-    now = monotonic()
-    requests = user_requests[user_id]
-    while requests and now - requests[0] > RATE_LIMIT_WINDOW_SECONDS:
-        requests.popleft()
-    if len(requests) >= RATE_LIMIT_MAX_REQUESTS:
-        return False
-    requests.append(now)
-    return True
-
-
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text(
-        "Paste a token contract address and I will pull its TRENCHCOAT rap sheet."
+def send_message(chat_id, text, parse_mode="Markdown"):
+    return api_call(
+        "sendMessage",
+        {
+            "chat_id": chat_id,
+            "text": text,
+            "parse_mode": parse_mode,
+            "disable_web_page_preview": True,
+        },
     )
 
 
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not update.message or not update.effective_user:
-        return
-
-    ca = (update.message.text or "").strip()
-    if not is_valid_ca(ca):
-        await update.message.reply_text("Invalid contract address.")
-        return
-
-    if not check_rate_limit(update.effective_user.id):
-        await update.message.reply_text("Slow down. 3 raps per minute max.")
-        return
-
-    chain = "ethereum" if ca.startswith("0x") else "solana"
-    loading = await update.message.reply_text("SCANNING...")
-
-    try:
-        dossier = fetch_dossier(ca, chain)
-        await loading.edit_text(format_dossier(dossier))
-    except Exception:
-        await loading.edit_text("Couldn't pull data on this one.")
+def edit_message(chat_id, message_id, text, parse_mode="Markdown"):
+    return api_call(
+        "editMessageText",
+        {
+            "chat_id": chat_id,
+            "message_id": message_id,
+            "text": text,
+            "parse_mode": parse_mode,
+            "disable_web_page_preview": True,
+        },
+    )
 
 
-def fetch_dossier(ca: str, chain: str = "solana") -> dict:
-    backend_url = os.getenv("BACKEND_URL", "https://trenchcoat.onrender.com")
-    url = f"{backend_url}/dossier/{ca}?chain={chain}"
+def fetch_dossier(ca):
+    url = f"{BACKEND_URL}/dossier/{ca}?chain=solana"
     req = urllib.request.Request(url, headers={"Accept": "application/json"})
-    with urllib.request.urlopen(req, timeout=30) as response:
-        return json.loads(response.read().decode())
+    with urllib.request.urlopen(req, timeout=35) as r:
+        return json.loads(r.read())
 
 
-def format_dossier(dossier: dict) -> str:
+def format_dossier(dossier, ca):
+    band = dossier.get("band", "UNKNOWN")
+    score = dossier.get("score", 0)
     overview = dossier.get("overview") or {}
+    symbol = overview.get("symbol", "UNKNOWN")
     deployer = dossier.get("deployer") or {}
-    distribution = dossier.get("distribution") or {}
-    bundle = distribution.get("bundle") or {}
-
-    symbol = overview.get("symbol") or "UNKNOWN"
-    band = dossier.get("band") or "UNKNOWN"
-    score = dossier.get("score", "?")
-    verdict = dossier.get("verdict") or "No verdict."
-    wallet = truncate_wallet(deployer.get("wallet"))
+    wallet = deployer.get("wallet", "unknown")
     prior_count = deployer.get("prior_count", 0)
     rugged_count = deployer.get("rugged_count", 0)
+    distribution = dossier.get("distribution") or {}
+    bundle = distribution.get("bundle") or {}
     bundle_pct = bundle.get("bundle_pct", distribution.get("bundle_pct"))
     top10_pct = distribution.get("top10_pct")
+    verdict = dossier.get("verdict") or "No verdict."
 
+    emoji = {"AVOID": "\U0001f534", "CAUTION": "\U0001f7e1", "CLEAR": "\U0001f7e2"}.get(
+        band,
+        "\u26aa",
+    )
+    wallet_short = truncate_wallet(wallet)
     bundle_text = f"{bundle_pct:.1f}%" if isinstance(bundle_pct, (int, float)) else "unknown"
     top10_text = f"{top10_pct:.1f}%" if isinstance(top10_pct, (int, float)) else "unknown"
 
     return "\n".join(
         [
-            f"{band_emoji(band)} ${symbol} — {band}",
+            f"{emoji} ${symbol} - {band}",
             f"Score: {score}/100",
             "",
             f"Verdict: {verdict}",
             "",
-            f"Dev: {wallet}",
+            f"Dev: {wallet_short}",
             f"Prior tokens: {prior_count}",
             f"Rugged: {rugged_count}",
             f"Bundle: {bundle_text}",
             f"Top 10: {top10_text}",
             "",
-            f"CA: {dossier.get('ca', 'unknown')}",
+            f"CA: {ca}",
         ]
     )
 
 
-def main() -> None:
-    if not TELEGRAM_BOT_TOKEN:
+def truncate_wallet(wallet):
+    if not wallet or wallet == "unknown" or len(wallet) <= 8:
+        return wallet or "unknown"
+    return f"{wallet[:4]}...{wallet[-4:]}"
+
+
+def rate_limited(user_id):
+    now = time.time()
+    recent = [ts for ts in rate_limits.get(user_id, []) if now - ts < 60]
+    if len(recent) >= 3:
+        rate_limits[user_id] = recent
+        return True
+    recent.append(now)
+    rate_limits[user_id] = recent
+    return False
+
+
+def handle_message(message):
+    chat_id = message["chat"]["id"]
+    user_id = message.get("from", {}).get("id", chat_id)
+    text = (message.get("text") or "").strip()
+
+    if text == "/start":
+        send_message(chat_id, "Paste a Solana token contract address and I will pull its TRENCHCOAT rap sheet.")
+        return
+
+    match = SOLANA_CA.search(text)
+    if not match:
+        send_message(chat_id, "Invalid contract address.")
+        return
+
+    if rate_limited(user_id):
+        send_message(chat_id, "Slow down. 3 raps per minute max.")
+        return
+
+    ca = match.group(0)
+    loading = send_message(chat_id, "SCANNING...", parse_mode=None)
+    message_id = loading["result"]["message_id"]
+
+    try:
+        dossier = fetch_dossier(ca)
+        edit_message(chat_id, message_id, format_dossier(dossier, ca), parse_mode=None)
+    except Exception:
+        edit_message(chat_id, message_id, "Couldn't pull data on this one.", parse_mode=None)
+
+
+def main():
+    if not TOKEN:
         raise RuntimeError("TELEGRAM_BOT_TOKEN is not configured")
 
-    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    application.run_polling()
+    offset = None
+    while True:
+        params = {"timeout": 30}
+        if offset is not None:
+            params["offset"] = offset
+        query = urllib.parse.urlencode(params)
+        updates = api_call(f"getUpdates?{query}")
+        for update in updates.get("result", []):
+            offset = update["update_id"] + 1
+            message = update.get("message")
+            if message and "text" in message:
+                handle_message(message)
+        time.sleep(1)
 
 
 if __name__ == "__main__":
