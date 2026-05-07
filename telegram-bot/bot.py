@@ -1,17 +1,16 @@
-import asyncio
+import json
 import os
 import re
+import urllib.request
 from collections import defaultdict, deque
 from time import monotonic
 
-import httpx
 from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 
 load_dotenv()
 
-BACKEND_URL = os.getenv("BACKEND_URL", "https://trenchcoat.onrender.com").rstrip("/")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
 SOLANA_CA = re.compile(r"^[1-9A-HJ-NP-Za-km-z]{32,50}$")
@@ -75,17 +74,18 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     loading = await update.message.reply_text("SCANNING...")
 
     try:
-        dossier = await fetch_dossier(ca, chain)
+        dossier = fetch_dossier(ca, chain)
         await loading.edit_text(format_dossier(dossier))
     except Exception:
         await loading.edit_text("Couldn't pull data on this one.")
 
 
-async def fetch_dossier(ca: str, chain: str) -> dict:
-    async with httpx.AsyncClient(timeout=15) as client:
-        response = await client.get(f"{BACKEND_URL}/dossier/{ca}", params={"chain": chain})
-        response.raise_for_status()
-        return response.json()
+def fetch_dossier(ca: str, chain: str = "solana") -> dict:
+    backend_url = os.getenv("BACKEND_URL", "https://trenchcoat.onrender.com")
+    url = f"{backend_url}/dossier/{ca}?chain={chain}"
+    req = urllib.request.Request(url, headers={"Accept": "application/json"})
+    with urllib.request.urlopen(req, timeout=30) as response:
+        return json.loads(response.read().decode())
 
 
 def format_dossier(dossier: dict) -> str:
