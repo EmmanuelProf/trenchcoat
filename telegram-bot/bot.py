@@ -1,7 +1,6 @@
 import json
 import os
 import time
-import urllib.parse
 import urllib.request
 
 from dotenv import load_dotenv
@@ -27,7 +26,7 @@ def api_call(method, data=None):
         )
     else:
         req = urllib.request.Request(url)
-    with urllib.request.urlopen(req, timeout=10) as r:
+    with urllib.request.urlopen(req, timeout=15) as r:
         return json.loads(r.read())
 
 
@@ -59,7 +58,7 @@ def edit_message(chat_id, message_id, text, parse_mode="Markdown"):
 def fetch_dossier(ca):
     url = f"{BACKEND_URL}/dossier/{ca}?chain=solana"
     req = urllib.request.Request(url, headers={"Accept": "application/json"})
-    with urllib.request.urlopen(req, timeout=35) as r:
+    with urllib.request.urlopen(req, timeout=45) as r:
         return json.loads(r.read())
 
 
@@ -154,19 +153,33 @@ def main():
     if not TOKEN:
         raise RuntimeError("TELEGRAM_BOT_TOKEN is not configured")
 
-    offset = None
+    print("TRENCHCOAT bot starting...")
+    offset = 0
+    consecutive_errors = 0
+    
     while True:
-        params = {"timeout": 30}
-        if offset is not None:
-            params["offset"] = offset
-        query = urllib.parse.urlencode(params)
-        updates = api_call(f"getUpdates?{query}")
-        for update in updates.get("result", []):
-            offset = update["update_id"] + 1
-            message = update.get("message")
-            if message and "text" in message:
-                handle_message(message)
-        time.sleep(1)
+        try:
+            url = f"{BASE}/getUpdates?offset={offset}&timeout=60"
+            req = urllib.request.Request(url)
+            with urllib.request.urlopen(req, timeout=65) as r:
+                data = json.loads(r.read())
+            
+            consecutive_errors = 0
+            
+            for update in data.get("result", []):
+                offset = update["update_id"] + 1
+                if "message" in update:
+                    try:
+                        handle_message(update["message"])
+                    except Exception as e:
+                        print(f"Error handling message: {e}")
+        
+        except Exception as e:
+            consecutive_errors += 1
+            wait = min(consecutive_errors * 2, 30)
+            print(f"Polling error (attempt {consecutive_errors}): {e}")
+            print(f"Retrying in {wait}s...")
+            time.sleep(wait)
 
 
 if __name__ == "__main__":
