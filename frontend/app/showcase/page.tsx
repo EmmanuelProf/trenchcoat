@@ -72,11 +72,18 @@ export default function Home() {
         }
         @media (max-width: 768px) {
           .nav-links { display: none !important; }
-          .hero { padding: 100px 24px 60px !important; }
+          .showcase-nav { padding: 16px 20px !important; }
+          .showcase-logo { font-size: 26px !important; letter-spacing: 6px !important; }
+          .showcase-nav-cta { padding: 10px 16px !important; font-size: 10px !important; letter-spacing: 3px !important; }
+          .hero { padding: 120px 24px 60px !important; min-height: auto !important; }
+          .hero-title { font-size: clamp(58px, 19vw, 92px) !important; letter-spacing: 6px !important; max-width: 100% !important; overflow-wrap: anywhere; }
+          .hero-actions { display: grid !important; grid-template-columns: 1fr !important; max-width: 320px !important; }
+          .hero-actions a,
+          .hero-actions button { width: 100%; text-align: center; }
           .section { padding: 80px 24px !important; }
           .footer { padding: 40px 24px !important; flex-direction: column; gap: 32px; text-align: center; }
           .step { grid-template-columns: 1fr !important; gap: 12px !important; }
-          .paste-shell { margin-top: 48px !important; }
+          .paste-shell { margin-top: 56px !important; max-width: 100% !important; }
         }
       ` }} />
     </main>
@@ -86,6 +93,7 @@ export default function Home() {
 function Nav({ onTry, onNavigate }: { onTry: () => void; onNavigate: (id: string) => void }) {
   return (
     <nav
+      className="showcase-nav"
       style={{
         position: "fixed",
         top: 0,
@@ -100,7 +108,7 @@ function Nav({ onTry, onNavigate }: { onTry: () => void; onNavigate: (id: string
         background: "rgba(8,8,8,0.95)",
       }}
     >
-      <Link href="/showcase" style={{ fontFamily: fonts.display, fontSize: 28, letterSpacing: 4, color: COLORS.text, textDecoration: "none" }}>
+      <Link className="showcase-logo" href="/showcase" style={{ fontFamily: fonts.display, fontSize: 28, letterSpacing: 4, color: COLORS.text, textDecoration: "none" }}>
         TRENCHCOAT
       </Link>
       <div className="nav-links" style={{ display: "flex", alignItems: "center", gap: 32 }}>
@@ -119,7 +127,7 @@ function Nav({ onTry, onNavigate }: { onTry: () => void; onNavigate: (id: string
           TG BOT ↗
         </a>
       </div>
-      <button onClick={onTry} style={navCtaStyle}>
+      <button className="showcase-nav-cta" onClick={onTry} style={navCtaStyle}>
         TRY IT LIVE ↗
       </button>
     </nav>
@@ -131,7 +139,7 @@ function Hero({ onTry }: { onTry: () => void }) {
     <section className="hero" style={{ minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", padding: "120px 48px 80px", position: "relative", overflow: "hidden" }}>
       <div style={heroGridStyle} />
       <p style={{ ...eyebrowStyle, animation: "fadeUp 0.6s ease forwards 0.2s" }}>→ Birdeye BIP Sprint 3 Submission</p>
-      <h1 style={{ fontFamily: fonts.display, fontSize: "clamp(80px, 14vw, 200px)", lineHeight: 0.9, letterSpacing: 8, color: COLORS.text, marginBottom: 32, opacity: 0, animation: "fadeUp 0.6s ease forwards 0.4s" }}>
+      <h1 className="hero-title" style={{ fontFamily: fonts.display, fontSize: "clamp(80px, 14vw, 200px)", lineHeight: 0.9, letterSpacing: 8, color: COLORS.text, marginBottom: 32, opacity: 0, animation: "fadeUp 0.6s ease forwards 0.4s" }}>
         TRENCH<span style={{ color: COLORS.red }}>COAT</span>
       </h1>
       <p style={{ fontFamily: fonts.mono, fontSize: 15, color: COLORS.muted, lineHeight: 1.8, maxWidth: 520, marginBottom: 48, opacity: 0, animation: "fadeUp 0.6s ease forwards 0.6s" }}>
@@ -140,7 +148,7 @@ function Hero({ onTry }: { onTry: () => void }) {
         <br />
         TRENCHCOAT looks.
       </p>
-      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", opacity: 0, animation: "fadeUp 0.6s ease forwards 0.8s" }}>
+      <div className="hero-actions" style={{ display: "flex", gap: 16, flexWrap: "wrap", opacity: 0, animation: "fadeUp 0.6s ease forwards 0.8s" }}>
         <button onClick={onTry} style={primaryButtonStyle}>TRY IT NOW →</button>
         <a href={links.github} target="_blank" rel="noreferrer" style={secondaryButtonStyle}>View on GitHub ↗</a>
         <a href={links.telegram} target="_blank" rel="noreferrer" style={secondaryButtonStyle}>Telegram Bot ↗</a>

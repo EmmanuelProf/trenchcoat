@@ -25,7 +25,7 @@ export default function PasteHero() {
 
   return (
     <div style={{ width: '100%', maxWidth: '800px' }}>
-      <div style={{ display: 'flex', gap: '8px' }}>
+      <div className="paste-hero-controls" style={{ display: 'flex', gap: '8px' }}>
         <input
           type="text"
           value={input}
@@ -34,6 +34,7 @@ export default function PasteHero() {
           placeholder="PASTE CONTRACT ADDRESS"
           style={{
             flex: 1,
+            minWidth: 0,
             height: '52px',
             background: '#171717',
             border: error ? '1px solid #ef4444' : '1px solid #262626',
@@ -46,6 +47,7 @@ export default function PasteHero() {
           }}
         />
         <select
+          className="paste-hero-select"
           value={chain}
           onChange={(e) => setChain(e.target.value)}
           style={{
@@ -65,6 +67,7 @@ export default function PasteHero() {
           <option value="ethereum">ETHEREUM</option>
         </select>
         <button
+          className="paste-hero-button"
           onClick={handleSubmit}
           disabled={loading}
           style={{
@@ -96,6 +99,20 @@ export default function PasteHero() {
           {error}
         </p>
       )}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (max-width: 640px) {
+          .paste-hero-controls {
+            display: grid !important;
+            grid-template-columns: 1fr;
+            width: 100%;
+          }
+
+          .paste-hero-select,
+          .paste-hero-button {
+            width: 100%;
+          }
+        }
+      ` }} />
     </div>
   )
 }
