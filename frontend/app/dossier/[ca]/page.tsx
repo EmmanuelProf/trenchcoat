@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { RapSheet } from "@/components/RapSheet";
+import { TelegramBotLink } from "@/components/TelegramBotLink";
 import { getDossier } from "@/lib/api";
 
 type DossierPageProps = {
@@ -49,7 +50,10 @@ export default async function DossierPage({
         <a href="/" className="text-sm font-bold">
           TRENCHCOAT
         </a>
-        <span className="text-xs text-[#737373]">{dossier.chain.toUpperCase()}</span>
+        <div className="flex items-center gap-3">
+          <TelegramBotLink />
+          <span className="text-xs text-[#737373]">{dossier.chain.toUpperCase()}</span>
+        </div>
       </div>
       <RapSheet dossier={dossier} />
     </main>

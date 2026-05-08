@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import IntroLoader from "@/components/IntroLoader";
 import PasteHero from "@/components/PasteHero";
+import { TelegramBotLink } from "@/components/TelegramBotLink";
 
 export default function Home() {
   const [showIntro, setShowIntro] = useState(true);
@@ -17,9 +18,12 @@ export default function Home() {
         <Link href="/" className="text-sm font-bold tracking-normal">
           TRENCHCOAT
         </Link>
-        <Link href="/trending" className="text-sm text-[#737373]">
-          TRENDING
-        </Link>
+        <div className="flex items-center gap-3">
+          <TelegramBotLink />
+          <Link href="/trending" className="text-sm text-[#737373]">
+            TRENDING
+          </Link>
+        </div>
       </nav>
 
       <section className="mx-auto flex min-h-[calc(100vh-73px)] max-w-6xl flex-col justify-center px-5 py-20">
