@@ -1,9 +1,11 @@
 import json
 import os
+import threading
 import time
 import urllib.request
 
 from dotenv import load_dotenv
+from fastapi import APIRouter, Request
 
 load_dotenv()
 
@@ -13,6 +15,7 @@ BASE = f"https://api.telegram.org/bot{TOKEN}"
 
 SOLANA_CA = __import__("re").compile(r"[1-9A-HJ-NP-Za-km-z]{32,50}")
 rate_limits = {}
+router = APIRouter()
 
 
 def api_call(method, data=None):
@@ -61,6 +64,41 @@ def get_me():
 
 def delete_webhook():
     return api_call("deleteWebhook", {"drop_pending_updates": False})
+
+
+def set_webhook():
+    webhook_url = f"{BACKEND_URL}/telegram/webhook"
+    return api_call("setWebhook", {"url": webhook_url, "drop_pending_updates": True})
+
+
+def configure_webhook():
+    if not TOKEN:
+        print("No TELEGRAM_BOT_TOKEN found, skipping Telegram webhook")
+        return
+
+    print("Configuring Telegram webhook...")
+    print(f"Telegram backend URL: {BACKEND_URL}")
+    try:
+        me = get_me()
+        username = ((me.get("result") or {}).get("username")) or "unknown"
+        print(f"Telegram bot identity: @{username}")
+    except Exception as e:
+        print(f"Telegram getMe failed: {e}")
+
+    try:
+        webhook_result = set_webhook()
+        print(f"Telegram webhook set: {webhook_result.get('ok')}")
+    except Exception as e:
+        print(f"Telegram setWebhook failed: {e}")
+
+
+@router.post("/telegram/webhook")
+async def telegram_webhook(request: Request):
+    update = await request.json()
+    message = update.get("message")
+    if message and "text" in message:
+        threading.Thread(target=handle_message, args=(message,), daemon=True).start()
+    return {"ok": True}
 
 
 def fetch_dossier(ca):
@@ -169,48 +207,7 @@ def main():
     if not TOKEN:
         raise RuntimeError("TELEGRAM_BOT_TOKEN is not configured")
 
-    print("TRENCHCOAT bot starting...")
-    print(f"Telegram backend URL: {BACKEND_URL}")
-    try:
-        webhook_result = delete_webhook()
-        print(f"Telegram webhook deleted: {webhook_result.get('ok')}")
-    except Exception as e:
-        print(f"Telegram deleteWebhook failed: {e}")
-
-    try:
-        me = get_me()
-        username = ((me.get("result") or {}).get("username")) or "unknown"
-        print(f"Telegram bot identity: @{username}")
-    except Exception as e:
-        print(f"Telegram getMe failed: {e}")
-
-    print("Telegram polling started")
-    offset = 0
-    consecutive_errors = 0
-    
-    while True:
-        try:
-            url = f"{BASE}/getUpdates?offset={offset}&timeout=60"
-            req = urllib.request.Request(url)
-            with urllib.request.urlopen(req, timeout=65) as r:
-                data = json.loads(r.read())
-            
-            consecutive_errors = 0
-            
-            for update in data.get("result", []):
-                offset = update["update_id"] + 1
-                if "message" in update:
-                    try:
-                        handle_message(update["message"])
-                    except Exception as e:
-                        print(f"Error handling message: {e}")
-        
-        except Exception as e:
-            consecutive_errors += 1
-            wait = min(consecutive_errors * 2, 30)
-            print(f"Polling error (attempt {consecutive_errors}): {e}")
-            print(f"Retrying in {wait}s...")
-            time.sleep(wait)
+    configure_webhook()
 
 
 if __name__ == "__main__":
