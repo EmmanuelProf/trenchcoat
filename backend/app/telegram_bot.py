@@ -3,6 +3,7 @@ import os
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from html import escape
 
@@ -107,11 +108,17 @@ async def telegram_webhook(request: Request):
 
 
 def fetch_dossier(ca):
-    url = f"{BACKEND_URL}/dossier/{ca}?chain=solana"
+    encoded_ca = urllib.parse.quote(ca, safe="")
+    url = f"{BACKEND_URL}/dossier/{encoded_ca}?chain=solana"
     print(f"Fetching dossier from {url}")
     req = urllib.request.Request(url, headers={"Accept": "application/json"})
-    with urllib.request.urlopen(req, timeout=45) as r:
-        return json.loads(r.read())
+    try:
+        with urllib.request.urlopen(req, timeout=90) as r:
+            return json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        body = e.read().decode(errors="replace")
+        print(f"Backend dossier error status={e.code} body={body}")
+        raise
 
 
 def format_dossier(dossier, ca):
@@ -177,6 +184,44 @@ def format_dossier(dossier, ca):
             f'<a href="{solscan_url}">Solscan</a>  |  <a href="{rugcheck_url}">RugCheck</a>',
             "",
             f"CA: <code>{ca_text}</code>",
+        ]
+    )
+
+
+def format_plain_dossier(dossier, ca):
+    band = dossier.get("band", "UNKNOWN")
+    score = dossier.get("score", 0)
+    overview = dossier.get("overview") or {}
+    symbol = overview.get("symbol", "UNKNOWN")
+    deployer = dossier.get("deployer") or {}
+    wallet = truncate_wallet(deployer.get("wallet", "unknown"))
+    prior_count = deployer.get("prior_count", 0)
+    rugged_count = deployer.get("rugged_count", 0)
+    distribution = dossier.get("distribution") or {}
+    bundle = distribution.get("bundle") or {}
+    bundle_pct = format_pct(bundle.get("bundle_pct", distribution.get("bundle_pct")))
+    top10_pct = format_pct(distribution.get("top10_pct"))
+    verdict = dossier.get("verdict") or "No verdict."
+    emoji = band_emoji(band)
+
+    return "\n".join(
+        [
+            f"{emoji} TRENCHCOAT RAP SHEET",
+            f"${symbol} - {band}",
+            f"Score: {score}/100",
+            "",
+            f"Verdict: {verdict}",
+            "",
+            f"Dev: {wallet}",
+            f"Prior tokens: {prior_count}",
+            f"Rugged: {rugged_count}",
+            f"Bundle: {bundle_pct}",
+            f"Top 10: {top10_pct}",
+            "",
+            f"Solscan: https://solscan.io/token/{ca}",
+            f"RugCheck: https://rugcheck.xyz/tokens/{ca}",
+            "",
+            f"CA: {ca}",
         ]
     )
 
@@ -283,11 +328,23 @@ def handle_message(message):
 
     try:
         dossier = fetch_dossier(ca)
+    except Exception as e:
+        print(f"Dossier fetch failed chat_id={chat_id} ca={ca}: {e}")
+        edit_message(
+            chat_id,
+            message_id,
+            "Couldn't pull data on this one.\n\nIf this is a fresh token, try again in 1-2 minutes.",
+            parse_mode=None,
+        )
+        return
+
+    try:
         edit_message(chat_id, message_id, format_dossier(dossier, ca), parse_mode="HTML")
         print(f"Dossier sent chat_id={chat_id} ca={ca}")
     except Exception as e:
-        print(f"Dossier fetch/send failed chat_id={chat_id} ca={ca}: {e}")
-        edit_message(chat_id, message_id, "Couldn't pull data on this one.", parse_mode=None)
+        print(f"Formatted Telegram send failed chat_id={chat_id} ca={ca}: {e}")
+        edit_message(chat_id, message_id, format_plain_dossier(dossier, ca), parse_mode=None)
+        print(f"Plain dossier sent chat_id={chat_id} ca={ca}")
 
 
 def main():
