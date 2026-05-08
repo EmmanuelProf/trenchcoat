@@ -55,8 +55,17 @@ def edit_message(chat_id, message_id, text, parse_mode="Markdown"):
     )
 
 
+def get_me():
+    return api_call("getMe")
+
+
+def delete_webhook():
+    return api_call("deleteWebhook", {"drop_pending_updates": False})
+
+
 def fetch_dossier(ca):
     url = f"{BACKEND_URL}/dossier/{ca}?chain=solana"
+    print(f"Fetching dossier from {url}")
     req = urllib.request.Request(url, headers={"Accept": "application/json"})
     with urllib.request.urlopen(req, timeout=45) as r:
         return json.loads(r.read())
@@ -124,28 +133,35 @@ def handle_message(message):
     chat_id = message["chat"]["id"]
     user_id = message.get("from", {}).get("id", chat_id)
     text = (message.get("text") or "").strip()
+    print(f"Telegram message received chat_id={chat_id} user_id={user_id} text={text[:80]!r}")
 
     if text == "/start":
+        print(f"Sending start response chat_id={chat_id}")
         send_message(chat_id, "Paste a Solana token contract address and I will pull its TRENCHCOAT rap sheet.")
         return
 
     match = SOLANA_CA.search(text)
     if not match:
+        print(f"Invalid contract address chat_id={chat_id}")
         send_message(chat_id, "Invalid contract address.")
         return
 
     if rate_limited(user_id):
+        print(f"Rate limited user_id={user_id}")
         send_message(chat_id, "Slow down. 3 raps per minute max.")
         return
 
     ca = match.group(0)
+    print(f"Valid contract address chat_id={chat_id} ca={ca}")
     loading = send_message(chat_id, "SCANNING...", parse_mode=None)
     message_id = loading["result"]["message_id"]
 
     try:
         dossier = fetch_dossier(ca)
         edit_message(chat_id, message_id, format_dossier(dossier, ca), parse_mode=None)
-    except Exception:
+        print(f"Dossier sent chat_id={chat_id} ca={ca}")
+    except Exception as e:
+        print(f"Dossier fetch/send failed chat_id={chat_id} ca={ca}: {e}")
         edit_message(chat_id, message_id, "Couldn't pull data on this one.", parse_mode=None)
 
 
@@ -154,6 +170,21 @@ def main():
         raise RuntimeError("TELEGRAM_BOT_TOKEN is not configured")
 
     print("TRENCHCOAT bot starting...")
+    print(f"Telegram backend URL: {BACKEND_URL}")
+    try:
+        webhook_result = delete_webhook()
+        print(f"Telegram webhook deleted: {webhook_result.get('ok')}")
+    except Exception as e:
+        print(f"Telegram deleteWebhook failed: {e}")
+
+    try:
+        me = get_me()
+        username = ((me.get("result") or {}).get("username")) or "unknown"
+        print(f"Telegram bot identity: @{username}")
+    except Exception as e:
+        print(f"Telegram getMe failed: {e}")
+
+    print("Telegram polling started")
     offset = 0
     consecutive_errors = 0
     
