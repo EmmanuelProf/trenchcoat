@@ -4,6 +4,7 @@ import threading
 import time
 import urllib.error
 import urllib.request
+from html import escape
 
 from dotenv import load_dotenv
 from fastapi import APIRouter, Request
@@ -118,6 +119,10 @@ def format_dossier(dossier, ca):
     score = dossier.get("score", 0)
     overview = dossier.get("overview") or {}
     symbol = overview.get("symbol", "UNKNOWN")
+    name = overview.get("name")
+    liquidity = overview.get("liquidity")
+    market_cap = overview.get("mc")
+    age_days = overview.get("age_days")
     deployer = dossier.get("deployer") or {}
     wallet = deployer.get("wallet", "unknown")
     prior_count = deployer.get("prior_count", 0)
@@ -128,30 +133,108 @@ def format_dossier(dossier, ca):
     top10_pct = distribution.get("top10_pct")
     verdict = dossier.get("verdict") or "No verdict."
 
-    emoji = {"AVOID": "\U0001f534", "CAUTION": "\U0001f7e1", "CLEAR": "\U0001f7e2"}.get(
-        band,
-        "\u26aa",
-    )
+    emoji = band_emoji(band)
+    action = band_action(band)
     wallet_short = truncate_wallet(wallet)
-    bundle_text = f"{bundle_pct:.1f}%" if isinstance(bundle_pct, (int, float)) else "unknown"
-    top10_text = f"{top10_pct:.1f}%" if isinstance(top10_pct, (int, float)) else "unknown"
+    bundle_text = format_pct(bundle_pct)
+    top10_text = format_pct(top10_pct)
+    liquidity_text = format_money(liquidity)
+    market_cap_text = format_money(market_cap)
+    age_text = format_age(age_days)
+    score_bar = make_score_bar(score)
+    symbol_text = escape(str(symbol))
+    name_text = f" · {escape(str(name))}" if name else ""
+    verdict_text = escape(str(verdict))
+    ca_text = escape(ca)
+    wallet_text = escape(wallet_short)
+    solscan_url = f"https://solscan.io/token/{ca}"
+    rugcheck_url = f"https://rugcheck.xyz/tokens/{ca}"
 
     return "\n".join(
         [
-            f"{emoji} ${symbol} - {band}",
-            f"Score: {score}/100",
+            f"{emoji} <b>TRENCHCOAT RAP SHEET</b>",
+            f"<b>${symbol_text}</b>{name_text}",
             "",
-            f"Verdict: {verdict}",
+            f"<b>{action}</b>  ·  <b>{band}</b>",
+            f"<code>{score_bar}</code>  <b>{score}/100</b>",
             "",
-            f"Dev: {wallet_short}",
-            f"Prior tokens: {prior_count}",
-            f"Rugged: {rugged_count}",
-            f"Bundle: {bundle_text}",
-            f"Top 10: {top10_text}",
+            "<b>VERDICT</b>",
+            f"<i>{verdict_text}</i>",
             "",
-            f"CA: {ca}",
+            "<b>DEV FILE</b>",
+            f"Wallet: <code>{wallet_text}</code>",
+            f"Prior tokens: <b>{prior_count}</b>",
+            f"Rugged: <b>{rugged_count}</b>",
+            "",
+            "<b>SUPPLY / MARKET</b>",
+            f"Bundle: <b>{bundle_text}</b>",
+            f"Top 10: <b>{top10_text}</b>",
+            f"Liquidity: <b>{liquidity_text}</b>",
+            f"Market cap: <b>{market_cap_text}</b>",
+            f"Age: <b>{age_text}</b>",
+            "",
+            "<b>CHECKS</b>",
+            f'<a href="{solscan_url}">Solscan</a>  |  <a href="{rugcheck_url}">RugCheck</a>',
+            "",
+            f"CA: <code>{ca_text}</code>",
         ]
     )
+
+
+def band_emoji(band):
+    return {"AVOID": "\U0001f534", "CAUTION": "\U0001f7e1", "CLEAR": "\U0001f7e2"}.get(
+        band,
+        "\u26aa",
+    )
+
+
+def band_action(band):
+    if band == "AVOID":
+        return "DUMP"
+    if band == "CLEAR":
+        return "APE"
+    if band == "CAUTION":
+        return "CAUTION"
+    return "UNKNOWN"
+
+
+def make_score_bar(score):
+    try:
+        value = max(0, min(100, int(score)))
+    except (TypeError, ValueError):
+        value = 0
+    filled = round(value / 10)
+    return "█" * filled + "░" * (10 - filled)
+
+
+def format_pct(value):
+    if isinstance(value, (int, float)):
+        return f"{value:.1f}%"
+    return "unknown"
+
+
+def format_money(value):
+    if not isinstance(value, (int, float)):
+        return "unknown"
+    if value >= 1_000_000_000:
+        return f"${value / 1_000_000_000:.1f}B"
+    if value >= 1_000_000:
+        return f"${value / 1_000_000:.1f}M"
+    if value >= 1_000:
+        return f"${value / 1_000:.1f}K"
+    return f"${value:.2f}"
+
+
+def format_age(days):
+    if not isinstance(days, (int, float)):
+        return "unknown"
+    if days < 1:
+        return "< 1 day"
+    if days < 30:
+        return f"{int(days)} days"
+    if days < 365:
+        return f"{int(days / 30)} months"
+    return f"{days / 365:.1f} years"
 
 
 def truncate_wallet(wallet):
@@ -200,7 +283,7 @@ def handle_message(message):
 
     try:
         dossier = fetch_dossier(ca)
-        edit_message(chat_id, message_id, format_dossier(dossier, ca), parse_mode=None)
+        edit_message(chat_id, message_id, format_dossier(dossier, ca), parse_mode="HTML")
         print(f"Dossier sent chat_id={chat_id} ca={ca}")
     except Exception as e:
         print(f"Dossier fetch/send failed chat_id={chat_id} ca={ca}: {e}")
