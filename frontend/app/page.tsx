@@ -9,7 +9,7 @@ export default function Home() {
 
   return (
     <main style={{ minHeight: "100vh", background: "#0a0a0a" }}>
-      <IntroLoader onComplete={() => router.push("/showcase")} />
+      <IntroLoader onComplete={() => router.replace("/showcase")} />
     </main>
   );
 }

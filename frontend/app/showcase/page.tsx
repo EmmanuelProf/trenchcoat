@@ -29,14 +29,20 @@ const links = {
 };
 
 export default function Home() {
+  function scrollToSection(id: string) {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    window.history.replaceState(null, "", "/showcase");
+  }
+
   function scrollToPaste() {
     document.getElementById("try")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    window.history.replaceState(null, "", "/showcase");
   }
 
   return (
     <main style={{ background: COLORS.black, color: COLORS.text, fontFamily: fonts.body, overflowX: "hidden" }}>
       <div style={noiseStyle} />
-      <Nav onTry={scrollToPaste} />
+      <Nav onTry={scrollToPaste} onNavigate={scrollToSection} />
       <Hero onTry={scrollToPaste} />
       <ProblemSection />
       <SolutionSection />
@@ -77,7 +83,7 @@ export default function Home() {
   );
 }
 
-function Nav({ onTry }: { onTry: () => void }) {
+function Nav({ onTry, onNavigate }: { onTry: () => void; onNavigate: (id: string) => void }) {
   return (
     <nav
       style={{
@@ -94,20 +100,20 @@ function Nav({ onTry }: { onTry: () => void }) {
         background: "rgba(8,8,8,0.95)",
       }}
     >
-      <Link href="#" style={{ fontFamily: fonts.display, fontSize: 28, letterSpacing: 4, color: COLORS.text, textDecoration: "none" }}>
+      <Link href="/showcase" style={{ fontFamily: fonts.display, fontSize: 28, letterSpacing: 4, color: COLORS.text, textDecoration: "none" }}>
         TRENCHCOAT
       </Link>
       <div className="nav-links" style={{ display: "flex", alignItems: "center", gap: 32 }}>
         {[
-          ["Problem", "#problem"],
-          ["Solution", "#solution"],
-          ["How It Works", "#how"],
-          ["Stack", "#stack"],
-          ["Telegram", "#telegram"],
-        ].map(([label, href]) => (
-          <a key={label} href={href} style={navLinkStyle}>
+          ["Problem", "problem"],
+          ["Solution", "solution"],
+          ["How It Works", "how"],
+          ["Stack", "stack"],
+          ["Telegram", "telegram"],
+        ].map(([label, id]) => (
+          <button key={label} type="button" onClick={() => onNavigate(id)} style={navLinkButtonStyle}>
             {label}
-          </a>
+          </button>
         ))}
         <a href={links.telegram} target="_blank" rel="noreferrer" style={navLinkStyle}>
           TG BOT ↗
@@ -480,6 +486,7 @@ const heroGridStyle: React.CSSProperties = {
 };
 
 const navLinkStyle: React.CSSProperties = { fontFamily: fonts.mono, fontSize: 11, color: COLORS.muted, textDecoration: "none", letterSpacing: 2, textTransform: "uppercase" };
+const navLinkButtonStyle: React.CSSProperties = { ...navLinkStyle, background: "transparent", border: "none", padding: 0, cursor: "pointer" };
 const navCtaStyle: React.CSSProperties = { fontFamily: fonts.mono, fontSize: 11, color: COLORS.black, background: COLORS.text, padding: "8px 20px", letterSpacing: 2, border: "none", cursor: "pointer" };
 const primaryButtonStyle: React.CSSProperties = { fontFamily: fonts.mono, fontSize: 12, letterSpacing: 2, textTransform: "uppercase", background: COLORS.text, color: COLORS.black, padding: "14px 32px", textDecoration: "none", fontWeight: 700, border: "none", cursor: "pointer", display: "inline-block" };
 const secondaryButtonStyle: React.CSSProperties = { fontFamily: fonts.mono, fontSize: 12, letterSpacing: 2, textTransform: "uppercase", background: "transparent", color: COLORS.text, padding: "14px 32px", textDecoration: "none", border: `1px solid ${COLORS.border}`, display: "inline-block" };
